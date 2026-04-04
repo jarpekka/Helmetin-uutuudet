@@ -1,0 +1,172 @@
+:root {
+  --bg: #eff4f8;
+  --panel: #ffffff;
+  --text: #1c2733;
+  --muted: #566273;
+  --primary: #005f73;
+  --accent: #d97706;
+  --border: #d6dde4;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  color: var(--text);
+  background: radial-gradient(circle at top right, #d7e6ef 0%, #eff4f8 38%, #f6f9fb 100%);
+}
+
+.app {
+  width: min(980px, 94vw);
+  margin: 1.5rem auto 3rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.hero {
+  border-radius: 14px;
+  padding: 1.4rem;
+  color: #fff;
+  background: linear-gradient(120deg, #005f73 0%, #0a8394 62%, #189db0 100%);
+}
+
+.hero h1,
+.hero p {
+  margin: 0;
+}
+
+.hero p {
+  margin-top: 0.45rem;
+  opacity: 0.95;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.9rem;
+  align-items: end;
+}
+
+.muted {
+  background: #6b7280;
+}
+
+label {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 650;
+  color: var(--muted);
+}
+
+input,
+select,
+button {
+  font: inherit;
+}
+
+input,
+select {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 0.6rem;
+  background: #fff;
+}
+
+button {
+  border: 0;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  padding: 0.65rem 0.9rem;
+  cursor: pointer;
+}
+
+button:hover {
+  filter: brightness(1.03);
+}
+
+button:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.note,
+.status {
+  margin: 0.8rem 0 0;
+  color: var(--muted);
+}
+
+.status {
+  min-height: 1.2rem;
+}
+
+.results {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.results-footer {
+  margin-top: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.results-meta {
+  margin: 0;
+  color: var(--muted);
+}
+
+.book-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.85rem;
+  background: #fdfefe;
+}
+
+.book-card h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.book-card p {
+  margin: 0.45rem 0 0;
+}
+
+.book-link {
+  display: inline-block;
+  margin-top: 0.6rem;
+  color: var(--primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.book-link:hover {
+  text-decoration: underline;
+}
+
+.empty {
+  color: var(--muted);
+}
+
+.hidden {
+  display: none !important;
+}
+
+@media (max-width: 640px) {
+  .app {
+    margin-top: 1rem;
+  }
+}

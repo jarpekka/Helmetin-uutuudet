@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="fi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Helmet uutuuskirjahaku</title>
+    <link rel="stylesheet" href="styles.css?v=20260302-2" />
+  </head>
+  <body>
+    <main class="app" id="appRoot">
+
+      <header class="hero">
+        <h1>Helmet uutuuskirjahaku</h1>
+        <p>Hae varattavia uutuuskirjoja valitsemillasi kriteereillä (myös ennakkovarattavat).</p>
+      </header>
+
+      <section class="card">
+        <form id="searchForm" class="filters">
+          <label>
+            Vapaatekstihaku
+            <input id="textQuery" type="search" placeholder="Esim. Sofi Oksanen" />
+          </label>
+
+          <label>
+            Kirjallisuuslaji
+            <select id="genre" required>
+              <option value="both">Kauno ja tieto</option>
+              <option value="fiction">Kaunokirjallisuus</option>
+              <option value="nonfiction">Tietokirjallisuus</option>
+            </select>
+          </label>
+
+          <label>
+            Kieli
+            <select id="language" required>
+              <option value="either">Suomi tai englanti</option>
+              <option value="fin">Suomi</option>
+              <option value="eng">Englanti</option>
+            </select>
+          </label>
+
+          <label>
+            Kirjaston kokoelmaan lisätty
+            <select id="range" required>
+              <option value="1w">1 viikko</option>
+              <option value="2w">2 viikkoa</option>
+              <option value="1m" selected>1 kuukausi</option>
+              <option value="2m">2 kuukautta</option>
+              <option value="6m">6 kuukautta</option>
+            </select>
+          </label>
+
+          <label>
+            Nuortenkirjallisuus
+            <select id="youth" required>
+              <option value="exclude" selected>Rajaa pois</option>
+              <option value="include">Sisällytä</option>
+            </select>
+          </label>
+
+          <label>
+            Lastenkirjallisuus
+            <select id="children" required>
+              <option value="exclude" selected>Rajaa pois</option>
+              <option value="include">Sisällytä</option>
+            </select>
+          </label>
+
+          <button type="submit" id="searchBtn">Hae uutuuskirjat</button>
+        </form>
+
+        <p class="note" id="criteriaNote"></p>
+        <p class="status" id="statusMsg"></p>
+        <p class="note" id="audienceCounter"></p>
+      </section>
+
+      <section class="card">
+        <h2>Tulokset</h2>
+        <div id="results" class="results"></div>
+        <div id="resultsFooter" class="results-footer hidden">
+          <p id="resultsMeta" class="results-meta"></p>
+          <button type="button" id="showMoreBtn" class="muted hidden">Näytä lisää</button>
+        </div>
+      </section>
+    </main>
+
+    <template id="bookTemplate">
+      <article class="book-card">
+        <h3 class="book-title"></h3>
+        <p class="book-meta"></p>
+        <p class="book-extra"></p>
+        <a class="book-link" target="_blank" rel="noopener noreferrer">Avaa Helmetissa</a>
+      </article>
+    </template>
+
+    <script src="app.js?v=20260402-5"></script>
+  </body>
+</html>
