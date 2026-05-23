@@ -92,6 +92,11 @@ const YOUTH_KEYWORDS = [
   "varhaisnuor",
   "teini",
   "nuoret aikuiset",
+  "ylakoulu",
+  "yläkoulu",
+  "lukio",
+  "toisen asteen",
+  "high school",
 ];
 const CHILD_TITLE_HINTS = [
   "ella ja kaverit",
@@ -450,7 +455,7 @@ function dedupeById(records) {
 
 function getAudienceExclusionReason(record, includeYouth, includeChildren) {
   const audienceText = buildAudienceText(record);
-  const titleText = normalizeText(record?.title || "");
+  const titleText = buildTitleHintText(record);
   const shelfText = buildShelfText(record);
   const hasChildrenClassmark = /\bl\s*\d/.test(shelfText);
   const hasYouthClassmark = /\bn\s*\d/.test(shelfText);
@@ -517,6 +522,15 @@ function buildShelfText(record) {
   return normalizeText(bucket.join(" "));
 }
 
+function buildTitleHintText(record) {
+  const bucket = [];
+  collectText(record?.title, bucket);
+  collectText(record?.titleStatement, bucket);
+  collectText(record?.series, bucket);
+  collectText(record?.summary, bucket);
+  return normalizeText(bucket.join(" "));
+}
+
 function collectText(value, bucket) {
   if (value == null) return;
 
@@ -575,10 +589,12 @@ function renderMoreResults() {
     const year = book.year || "-";
     const language = formatLanguages(book.languages);
     const genre = formatGenres(book.majorGenres);
+    const bookGenres = formatBookGenres(book);
     const buildings = formatBuildings(book);
 
     node.querySelector(".book-title").textContent = title;
     node.querySelector(".book-meta").textContent = `${authors} | ${year}`;
+    node.querySelector(".book-genres").textContent = `Genret: ${bookGenres}`;
     node.querySelector(".book-extra").textContent = `Kieli: ${language} | Laji: ${genre} | Helmet-kirjastot: ${buildings}`;
 
     const linkEl = node.querySelector(".book-link");
@@ -819,6 +835,18 @@ function formatLanguages(languages) {
 function formatGenres(genres) {
   if (!Array.isArray(genres) || !genres.length) return "-";
   return genres.join(", ");
+}
+
+function formatBookGenres(record) {
+  const genres = Array.isArray(record?.genres) ? record.genres : [];
+  if (genres.length) return uniqueStrings(genres.map((genre) => String(genre).trim()).filter(Boolean)).join(", ");
+
+  const genreFacets = Array.isArray(record?.genreFacets) ? record.genreFacets : [];
+  if (genreFacets.length) {
+    return uniqueStrings(genreFacets.map((genre) => String(genre).trim()).filter(Boolean)).join(", ");
+  }
+
+  return "-";
 }
 
 function formatBuildings(record) {

@@ -145,6 +145,11 @@ button:disabled {
   margin: 0.45rem 0 0;
 }
 
+.book-genres {
+  color: var(--primary);
+  font-weight: 600;
+}
+
 .book-link {
   display: inline-block;
   margin-top: 0.6rem;
