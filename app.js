@@ -254,7 +254,7 @@ function buildQueries(textQuery) {
   const genres = genreSelect.value === "both" ? [] : [genreSelect.value];
   const languages = languageSelect.value === "either" ? ["fin", "eng"] : [languageSelect.value];
   const rangeFilter = mapRangeToCatalogDate(rangeSelect.value);
-  const buildingFilters = ['~building_sub_str_mv:"1"'];
+  const buildingFilters = ['building:"0/Helmet/"'];
 
   // Ei lainattavuussuodatusta: mukana myös ennakkovarattavat uutuudet.
   const combos = [];
