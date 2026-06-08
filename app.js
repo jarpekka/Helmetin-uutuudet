@@ -18,6 +18,7 @@ const KNOWN_SAFE_FIELD_NAMES = new Set([
   "author2",
   "author_corporate",
   "year",
+  "firstIndexed",
   "languages",
   "majorGenres",
   "buildings",
@@ -183,8 +184,7 @@ async function handleSearch(event) {
 
     const baseBooks = dedupeById(succeeded)
       .filter((book) => isHelmetRecord(book))
-      .filter((book) => matchesGenreSelection(book, genreSelect.value))
-      .filter((book) => isRecentPublication(book, textQuery));
+      .filter((book) => matchesGenreSelection(book, genreSelect.value));
 
     let removedChildren = 0;
     let removedYouth = 0;
@@ -208,7 +208,8 @@ async function handleSearch(event) {
       removedYouth,
     });
 
-    const books = audiencePassed.filter((book) => matchesTextQuery(book, textQuery));
+    const recencyFiltered = selectLanguageAwareRecentBooks(audiencePassed);
+    const books = recencyFiltered.filter((book) => matchesTextQuery(book, textQuery));
 
     if (!books.length) {
       const emptyMessage = textQuery ? "Hakusi ei tuottanut tuloksia." : "Ei osumia valituilla suodattimilla.";
@@ -253,22 +254,22 @@ function setAudienceCounter(stats = null) {
 function buildQueries(textQuery) {
   const genres = genreSelect.value === "both" ? [] : [genreSelect.value];
   const languages = languageSelect.value === "either" ? ["fin", "eng"] : [languageSelect.value];
-  const rangeFilter = mapRangeToCatalogDate(rangeSelect.value);
-  const buildingFilters = ['building:"0/Helmet/"'];
+  const currentYearRangeFilter = mapCurrentYearCatalogDate();
+  const buildingFilters = ['building:"1/Helmet/n/"'];
 
-  // Ei lainattavuussuodatusta: mukana myös ennakkovarattavat uutuudet.
+  // Haetaan vain tilassa "Tilattu" / "Kasiteltavana" olevasta Helmet-poolista.
   const combos = [];
   for (const buildingFilter of buildingFilters) {
     const filtersBase = [buildingFilter, '~format:"1/Book/Book/"'];
-    filtersBase.push(rangeFilter);
 
     for (const language of languages) {
+      const effectiveRangeFilter = currentYearRangeFilter;
       if (genres.length) {
         for (const genre of genres) {
-          combos.push([...filtersBase, `~major_genre_str_mv:\"${genre}\"`, `~language:\"${language}\"`]);
+          combos.push([...filtersBase, effectiveRangeFilter, `~major_genre_str_mv:\"${genre}\"`, `~language:\"${language}\"`]);
         }
       } else {
-        combos.push([...filtersBase, `~language:\"${language}\"`]);
+        combos.push([...filtersBase, effectiveRangeFilter, `~language:\"${language}\"`]);
       }
     }
   }
@@ -276,12 +277,9 @@ function buildQueries(textQuery) {
   return combos.map((filters) => ({ filters, textQuery }));
 }
 
-function mapRangeToCatalogDate(range) {
-  if (range === "1w") return 'catalog_date:"[NOW-7DAYS/DAY TO *]"';
-  if (range === "2w") return 'catalog_date:"[NOW-14DAYS/DAY TO *]"';
-  if (range === "2m") return 'catalog_date:"[NOW-2MONTHS/DAY TO *]"';
-  if (range === "6m") return 'catalog_date:"[NOW-6MONTHS/DAY TO *]"';
-  return 'catalog_date:"[NOW-1MONTHS/DAY TO *]"';
+function mapCurrentYearCatalogDate() {
+  const currentYear = new Date().getFullYear();
+  return `catalog_date:"[${currentYear}-01-01T00:00:00Z TO *]"`;
 }
 
 async function fetchBooks(query) {
@@ -300,6 +298,7 @@ async function fetchBooks(query) {
     "author2",
     "author_corporate",
     "year",
+    "firstIndexed",
     "languages",
     "majorGenres",
     "buildings",
@@ -558,13 +557,98 @@ function extractPublicationYear(record) {
   return match ? Number(match[0]) : null;
 }
 
-function isRecentPublication(record, textQuery = "") {
-  if (String(textQuery || "").trim()) return true;
+function selectLanguageAwareRecentBooks(records) {
+  if (!Array.isArray(records) || !records.length) return [];
 
-  const year = extractPublicationYear(record);
-  if (!year) return true;
+  const finnish = [];
+  const others = [];
+
+  for (const record of records) {
+    if (isFinnishRecord(record)) finnish.push(record);
+    else others.push(record);
+  }
+
+  const selectedFinnish = selectFinnishBooksByFirstIndexed(finnish);
+  const selectedOthers = selectOtherLanguageBooksByFirstIndexed(others);
+  return sortByFirstIndexedDesc([...selectedFinnish, ...selectedOthers]);
+}
+
+function isFinnishRecord(record) {
+  const languages = Array.isArray(record?.languages) ? record.languages : [];
+  return languages.some((language) => normalizeText(language) === "fin");
+}
+
+function parseFirstIndexed(record) {
+  const value = String(record?.firstIndexed || "").trim();
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function getSelectedRangeStartDate() {
+  const now = new Date();
+  if (rangeSelect.value === "1w") return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  if (rangeSelect.value === "2w") return new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+  if (rangeSelect.value === "2m") {
+    const date = new Date(now);
+    date.setMonth(date.getMonth() - 2);
+    return date;
+  }
+  if (rangeSelect.value === "6m") {
+    const date = new Date(now);
+    date.setMonth(date.getMonth() - 6);
+    return date;
+  }
+
+  const date = new Date(now);
+  date.setMonth(date.getMonth() - 1);
+  return date;
+}
+
+function sortByFirstIndexedDesc(records) {
+  return records.slice().sort((a, b) => {
+    const aTime = parseFirstIndexed(a)?.getTime() || 0;
+    const bTime = parseFirstIndexed(b)?.getTime() || 0;
+    return bTime - aTime;
+  });
+}
+
+function selectFinnishBooksByFirstIndexed(records) {
+  if (!records.length) return [];
+
   const currentYear = new Date().getFullYear();
-  return year >= currentYear - 2;
+  const yearStart = new Date(Date.UTC(currentYear, 0, 1, 0, 0, 0));
+  const selectedRangeStart = getSelectedRangeStartDate();
+
+  const currentYearRecords = records.filter((record) => {
+    const indexedAt = parseFirstIndexed(record);
+    return indexedAt ? indexedAt >= yearStart : true;
+  });
+
+  const recentWindowRecords = currentYearRecords.filter((record) => {
+    const indexedAt = parseFirstIndexed(record);
+    return indexedAt ? indexedAt >= selectedRangeStart : true;
+  });
+
+  return recentWindowRecords;
+}
+
+function selectOtherLanguageBooksByFirstIndexed(records) {
+  if (!records.length) return [];
+
+  const currentYear = new Date().getFullYear();
+  const yearStart = new Date(Date.UTC(currentYear, 0, 1, 0, 0, 0));
+  const selectedRangeStart = getSelectedRangeStartDate();
+  const currentYearRecords = records.filter((record) => {
+    const indexedAt = parseFirstIndexed(record);
+    return indexedAt ? indexedAt >= yearStart : true;
+  });
+  const recentWindowRecords = currentYearRecords.filter((record) => {
+    const indexedAt = parseFirstIndexed(record);
+    return indexedAt ? indexedAt >= selectedRangeStart : true;
+  });
+
+  return recentWindowRecords;
 }
 
 function renderBooks(records) {
@@ -595,7 +679,7 @@ function renderMoreResults() {
     node.querySelector(".book-title").textContent = title;
     node.querySelector(".book-meta").textContent = `${authors} | ${year}`;
     node.querySelector(".book-genres").textContent = `Genret: ${bookGenres}`;
-    node.querySelector(".book-extra").textContent = `Kieli: ${language} | Laji: ${genre} | Helmet-kirjastot: ${buildings}`;
+    node.querySelector(".book-extra").textContent = `Kieli: ${language} | Laji: ${genre} | Tila: Tilattu/Kasiteltavana | Helmet-kirjastot: ${buildings}`;
 
     const linkEl = node.querySelector(".book-link");
     linkEl.href = normalizeShortLink(book.shortlink, book);
@@ -664,7 +748,7 @@ function updateCriteriaNote() {
   const childrenLabel = childrenSelect.value === "include" ? "lastenkirjat mukana" : "lastenkirjat rajataan pois";
   const textLabel = textQueryInput.value.trim() ? `, haku: "${textQueryInput.value.trim()}"` : "";
 
-  criteriaNote.textContent = `Haku kohdistuu Helmetin uutuuslistan varattaviin kirjoihin (myös ennakkovarattavat): ${genreLabel}, ${languageLabel}, ${rangeLabel}${textLabel}. ${childrenLabel}, ${youthLabel}.`;
+  criteriaNote.textContent = `Haku kohdistuu Helmetin tilassa Tilattu/Kasiteltavana oleviin kuluvan vuoden kirjoihin: ${genreLabel}, ${languageLabel}, ${rangeLabel}${textLabel}. ${childrenLabel}, ${youthLabel}.`;
 }
 
 function setLoading(isLoading) {
